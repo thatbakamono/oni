@@ -5,7 +5,6 @@ use std::io::Cursor;
 
 #[derive(Debug)]
 pub enum MathOperation {
-    None,
     Increment,
     Decrement,
 }
@@ -32,8 +31,8 @@ pub enum Instruction {
         register2: Register,
         treat_value_in_first_register_as_memory_address: bool,
         treat_value_in_second_register_as_memory_address: bool,
-        operation_on_first_register: MathOperation,
-        operation_on_second_register: MathOperation,
+        operation_on_first_register: Option<MathOperation>,
+        operation_on_second_register: Option<MathOperation>,
     },
     IncrementValueInRegister {
         register: Register,
@@ -227,8 +226,8 @@ impl Instruction {
                 },
                 treat_value_in_first_register_as_memory_address: false,
                 treat_value_in_second_register_as_memory_address: true,
-                operation_on_first_register: MathOperation::None,
-                operation_on_second_register: MathOperation::None,
+                operation_on_first_register: None,
+                operation_on_second_register: None,
             }),
 
             0x22 | 0x32 => Ok(Instruction::LoadValueOfFirstRegisterIntoSecondRegister {
@@ -236,10 +235,10 @@ impl Instruction {
                 register2: Register::HL,
                 treat_value_in_first_register_as_memory_address: false,
                 treat_value_in_second_register_as_memory_address: true,
-                operation_on_first_register: MathOperation::None,
+                operation_on_first_register: None,
                 operation_on_second_register: match opcode & 0b11110000 {
-                    0x2 => MathOperation::Increment,
-                    0x3 => MathOperation::Decrement,
+                    0x2 => Some(MathOperation::Increment),
+                    0x3 => Some(MathOperation::Decrement),
                     _ => unreachable!(),
                 },
             }),
@@ -464,8 +463,8 @@ impl Instruction {
                         || opcode & 0b00001111 == 0xE,
                     treat_value_in_second_register_as_memory_address: opcode >> 4 == 0x7
                         && opcode & 0b00001111 < 0xE,
-                    operation_on_first_register: MathOperation::None,
-                    operation_on_second_register: MathOperation::None,
+                    operation_on_first_register: None,
+                    operation_on_second_register: None,
                 })
             }
 
@@ -481,12 +480,12 @@ impl Instruction {
                     treat_value_in_first_register_as_memory_address: true,
                     treat_value_in_second_register_as_memory_address: false,
                     operation_on_first_register: match opcode >> 4 {
-                        0x0 | 0x1 => MathOperation::None,
-                        0x2 => MathOperation::Increment,
-                        0x3 => MathOperation::Decrement,
+                        0x0 | 0x1 => None,
+                        0x2 => Some(MathOperation::Increment),
+                        0x3 => Some(MathOperation::Decrement),
                         _ => unreachable!(),
                     },
-                    operation_on_second_register: MathOperation::None,
+                    operation_on_second_register: None,
                 })
             }
 

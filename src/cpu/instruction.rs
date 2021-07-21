@@ -929,3 +929,24 @@ impl Instruction {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_invalid_opcodes() {
+        assert!(Instruction::decode(&mut Cursor::new(vec![0xD3])).is_err());
+        assert!(Instruction::decode(&mut Cursor::new(vec![0xE3])).is_err());
+        assert!(Instruction::decode(&mut Cursor::new(vec![0xE4])).is_err());
+        assert!(Instruction::decode(&mut Cursor::new(vec![0xF4])).is_err());
+        assert!(Instruction::decode(&mut Cursor::new(vec![0xCB])).is_err());
+        assert!(Instruction::decode(&mut Cursor::new(vec![0xDB])).is_err());
+        assert!(Instruction::decode(&mut Cursor::new(vec![0xEB])).is_err());
+        assert!(Instruction::decode(&mut Cursor::new(vec![0xEC])).is_err());
+        assert!(Instruction::decode(&mut Cursor::new(vec![0xFC])).is_err());
+        assert!(Instruction::decode(&mut Cursor::new(vec![0xDD])).is_err());
+        assert!(Instruction::decode(&mut Cursor::new(vec![0xED])).is_err());
+        assert!(Instruction::decode(&mut Cursor::new(vec![0xFD])).is_err());
+    }
+}

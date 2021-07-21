@@ -857,7 +857,7 @@ impl Instruction {
                     }
                     0x80..=0x87 | 0x90..=0x97 | 0xA0..=0xA7 | 0xB0..=0xB7 => {
                         Ok(Instruction::ResetNthBitOfRegister {
-                            nth: ((opcode >> 4) - 0x4) * 2,
+                            nth: ((opcode >> 4) - 0x8) * 2,
                             register: match opcode & 0b00001111 {
                                 0x0 => Register::B,
                                 0x1 => Register::C,
@@ -874,7 +874,7 @@ impl Instruction {
                     }
                     0x88..=0x8F | 0x90..=0x9F | 0xA8..=0xAF | 0xB8..=0xBF => {
                         Ok(Instruction::ResetNthBitOfRegister {
-                            nth: (((opcode >> 4) - 0x4) * 2) + 1,
+                            nth: (((opcode >> 4) - 0x8) * 2) + 1,
                             register: match opcode & 0b00001111 {
                                 0x8 => Register::B,
                                 0x9 => Register::C,
@@ -891,7 +891,7 @@ impl Instruction {
                     }
                     0xC0..=0xC7 | 0xD0..=0xD7 | 0xE0..=0xE7 | 0xF0..=0xF7 => {
                         Ok(Instruction::SetNthBitOfRegister {
-                            nth: ((opcode >> 4) - 0x4) * 2,
+                            nth: ((opcode >> 4) - 0xC) * 2,
                             register: match opcode & 0b00001111 {
                                 0x0 => Register::B,
                                 0x1 => Register::C,
@@ -908,7 +908,7 @@ impl Instruction {
                     }
                     0xC8..=0xCF | 0xD8..=0xDF | 0xE8..=0xEF | 0xF8..=0xFF => {
                         Ok(Instruction::SetNthBitOfRegister {
-                            nth: (((opcode >> 4) - 0x4) * 2) + 1,
+                            nth: (((opcode >> 4) - 0xC) * 2) + 1,
                             register: match opcode & 0b00001111 {
                                 0x8 => Register::B,
                                 0x9 => Register::C,

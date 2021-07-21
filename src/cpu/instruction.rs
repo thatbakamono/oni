@@ -86,17 +86,34 @@ pub enum Instruction {
         flag: Flag,
         address: u16,
     },
+    RotateContentOfRegisterAToLeft,
+    RotateContentOfRegisterAToLeftThroughCarryFlag,
+    RotateContentOfRegisterAToRight,
+    RotateContentOfRegisterAToRightThroughCarryFlag,
     RotateContentOfRegisterToLeft {
         register: Register,
+        treat_value_in_register_as_memory_address: bool,
     },
     RotateContentOfRegisterToLeftThroughCarryFlag {
         register: Register,
+        treat_value_in_register_as_memory_address: bool,
     },
     RotateContentOfRegisterToRight {
         register: Register,
+        treat_value_in_register_as_memory_address: bool,
     },
     RotateContentOfRegisterToRightThroughCarryFlag {
         register: Register,
+        treat_value_in_register_as_memory_address: bool,
+    },
+    ShiftContentOfRegisterToLeft {
+        register: Register,
+        treat_value_in_register_as_memory_address: bool,
+    },
+    ShiftContentOfRegisterToRight {
+        register: Register,
+        treat_value_in_register_as_memory_address: bool,
+        reset_first_bit: bool,
     },
     Not {
         register: Register,
@@ -176,6 +193,25 @@ pub enum Instruction {
     StoreContentOfRegisterHLInStackPointer,
     AddValueToStackPointer,
     AddValueToStackPointerAndStoreResultInRegisterHL,
+    SwapLowerBytesWithHigherBytesInRegister {
+        register: Register,
+        treat_value_in_register_as_memory_address: bool,
+    },
+    CopyNthBitOfRegisterToZFlag {
+        nth: u8,
+        register: Register,
+        treat_value_in_register_as_memory_address: bool,
+    },
+    ResetNthBitOfRegister {
+        nth: u8,
+        register: Register,
+        treat_value_in_register_as_memory_address: bool,
+    },
+    SetNthBitOfRegister {
+        nth: u8,
+        register: Register,
+        treat_value_in_register_as_memory_address: bool,
+    },
 }
 
 impl Instruction {
@@ -200,20 +236,10 @@ impl Instruction {
             0xF3 => Ok(Instruction::ResetInterruptMasterEnableFlag),
             0xFB => Ok(Instruction::SetInterruptMasterEnableFlag),
 
-            0x07 => Ok(Instruction::RotateContentOfRegisterToLeft {
-                register: Register::A,
-            }),
-            0x17 => Ok(Instruction::RotateContentOfRegisterToLeftThroughCarryFlag {
-                register: Register::A,
-            }),
-            0x0F => Ok(Instruction::RotateContentOfRegisterToRight {
-                register: Register::A,
-            }),
-            0x1F => Ok(
-                Instruction::RotateContentOfRegisterToRightThroughCarryFlag {
-                    register: Register::A,
-                },
-            ),
+            0x07 => Ok(Instruction::RotateContentOfRegisterAToLeft),
+            0x17 => Ok(Instruction::RotateContentOfRegisterAToLeftThroughCarryFlag),
+            0x0F => Ok(Instruction::RotateContentOfRegisterAToRight),
+            0x1F => Ok(Instruction::RotateContentOfRegisterAToRightThroughCarryFlag),
 
             0x27 => Ok(Instruction::AdjustAccumulatorToBCDNumber),
 
@@ -675,7 +701,230 @@ impl Instruction {
 
             0xF8 => Ok(Instruction::AddValueToStackPointerAndStoreResultInRegisterHL),
 
-            0xCB => Err(eyre!("Unknown 16 bit opcode")), // 16 bit opcodes
+            0xCB => {
+                let opcode = memory.read_u8()?;
+
+                match opcode {
+                    0x00..=0x07 => Ok(Instruction::RotateContentOfRegisterToLeftThroughCarryFlag {
+                        register: match opcode & 0b00001111 {
+                            0x0 => Register::B,
+                            0x1 => Register::C,
+                            0x2 => Register::D,
+                            0x3 => Register::E,
+                            0x4 => Register::H,
+                            0x5 => Register::L,
+                            0x6 => Register::HL,
+                            0x7 => Register::A,
+                            _ => unreachable!(),
+                        },
+                        treat_value_in_register_as_memory_address: opcode == 0x06,
+                    }),
+                    0x08..=0x0F => Ok(
+                        Instruction::RotateContentOfRegisterToRightThroughCarryFlag {
+                            register: match opcode & 0b00001111 {
+                                0x0 => Register::B,
+                                0x1 => Register::C,
+                                0x2 => Register::D,
+                                0x3 => Register::E,
+                                0x4 => Register::H,
+                                0x5 => Register::L,
+                                0x6 => Register::HL,
+                                0x7 => Register::A,
+                                _ => unreachable!(),
+                            },
+                            treat_value_in_register_as_memory_address: opcode == 0x0E,
+                        },
+                    ),
+                    0x10..=0x17 => Ok(Instruction::RotateContentOfRegisterToLeft {
+                        register: match opcode & 0b00001111 {
+                            0x0 => Register::B,
+                            0x1 => Register::C,
+                            0x2 => Register::D,
+                            0x3 => Register::E,
+                            0x4 => Register::H,
+                            0x5 => Register::L,
+                            0x6 => Register::HL,
+                            0x7 => Register::A,
+                            _ => unreachable!(),
+                        },
+                        treat_value_in_register_as_memory_address: opcode == 0x16,
+                    }),
+                    0x18..=0x1F => Ok(Instruction::RotateContentOfRegisterToRight {
+                        register: match opcode & 0b00001111 {
+                            0x0 => Register::B,
+                            0x1 => Register::C,
+                            0x2 => Register::D,
+                            0x3 => Register::E,
+                            0x4 => Register::H,
+                            0x5 => Register::L,
+                            0x6 => Register::HL,
+                            0x7 => Register::A,
+                            _ => unreachable!(),
+                        },
+                        treat_value_in_register_as_memory_address: opcode == 0x1E,
+                    }),
+                    0x20..=0x27 => Ok(Instruction::ShiftContentOfRegisterToLeft {
+                        register: match opcode & 0b00001111 {
+                            0x0 => Register::B,
+                            0x1 => Register::C,
+                            0x2 => Register::D,
+                            0x3 => Register::E,
+                            0x4 => Register::H,
+                            0x5 => Register::L,
+                            0x6 => Register::HL,
+                            0x7 => Register::A,
+                            _ => unreachable!(),
+                        },
+                        treat_value_in_register_as_memory_address: opcode == 0x26,
+                    }),
+                    0x28..=0x2F => Ok(Instruction::ShiftContentOfRegisterToRight {
+                        register: match opcode & 0b00001111 {
+                            0x0 => Register::B,
+                            0x1 => Register::C,
+                            0x2 => Register::D,
+                            0x3 => Register::E,
+                            0x4 => Register::H,
+                            0x5 => Register::L,
+                            0x6 => Register::HL,
+                            0x7 => Register::A,
+                            _ => unreachable!(),
+                        },
+                        treat_value_in_register_as_memory_address: opcode == 0x2E,
+                        reset_first_bit: false,
+                    }),
+                    0x30..=0x37 => Ok(Instruction::SwapLowerBytesWithHigherBytesInRegister {
+                        register: match opcode & 0b00001111 {
+                            0x0 => Register::B,
+                            0x1 => Register::C,
+                            0x2 => Register::D,
+                            0x3 => Register::E,
+                            0x4 => Register::H,
+                            0x5 => Register::L,
+                            0x6 => Register::HL,
+                            0x7 => Register::A,
+                            _ => unreachable!(),
+                        },
+                        treat_value_in_register_as_memory_address: opcode == 0x36,
+                    }),
+                    0x38..=0x3F => Ok(Instruction::ShiftContentOfRegisterToRight {
+                        register: match opcode & 0b00001111 {
+                            0x0 => Register::B,
+                            0x1 => Register::C,
+                            0x2 => Register::D,
+                            0x3 => Register::E,
+                            0x4 => Register::H,
+                            0x5 => Register::L,
+                            0x6 => Register::HL,
+                            0x7 => Register::A,
+                            _ => unreachable!(),
+                        },
+                        treat_value_in_register_as_memory_address: opcode == 0x3E,
+                        reset_first_bit: true,
+                    }),
+                    0x40..=0x47 | 0x50..=0x57 | 0x60..=0x67 | 0x70..=0x77 => {
+                        Ok(Instruction::CopyNthBitOfRegisterToZFlag {
+                            nth: ((opcode >> 4) - 0x4) * 2,
+                            register: match opcode & 0b00001111 {
+                                0x0 => Register::B,
+                                0x1 => Register::C,
+                                0x2 => Register::D,
+                                0x3 => Register::E,
+                                0x4 => Register::H,
+                                0x5 => Register::L,
+                                0x6 => Register::HL,
+                                0x7 => Register::A,
+                                _ => unreachable!(),
+                            },
+                            treat_value_in_register_as_memory_address: (opcode & 0b00001111) == 0x6,
+                        })
+                    }
+                    0x48..=0x4F | 0x58..=0x5F | 0x68..=0x6F | 0x78..=0x7F => {
+                        Ok(Instruction::CopyNthBitOfRegisterToZFlag {
+                            nth: (((opcode >> 4) - 0x4) * 2) + 1,
+                            register: match opcode & 0b00001111 {
+                                0x8 => Register::B,
+                                0x9 => Register::C,
+                                0xA => Register::D,
+                                0xB => Register::E,
+                                0xC => Register::H,
+                                0xD => Register::L,
+                                0xE => Register::HL,
+                                0xF => Register::A,
+                                _ => unreachable!(),
+                            },
+                            treat_value_in_register_as_memory_address: (opcode & 0b00001111) == 0xE,
+                        })
+                    }
+                    0x80..=0x87 | 0x90..=0x97 | 0xA0..=0xA7 | 0xB0..=0xB7 => {
+                        Ok(Instruction::ResetNthBitOfRegister {
+                            nth: ((opcode >> 4) - 0x4) * 2,
+                            register: match opcode & 0b00001111 {
+                                0x0 => Register::B,
+                                0x1 => Register::C,
+                                0x2 => Register::D,
+                                0x3 => Register::E,
+                                0x4 => Register::H,
+                                0x5 => Register::L,
+                                0x6 => Register::HL,
+                                0x7 => Register::A,
+                                _ => unreachable!(),
+                            },
+                            treat_value_in_register_as_memory_address: (opcode & 0b00001111) == 0x6,
+                        })
+                    }
+                    0x88..=0x8F | 0x90..=0x9F | 0xA8..=0xAF | 0xB8..=0xBF => {
+                        Ok(Instruction::ResetNthBitOfRegister {
+                            nth: (((opcode >> 4) - 0x4) * 2) + 1,
+                            register: match opcode & 0b00001111 {
+                                0x8 => Register::B,
+                                0x9 => Register::C,
+                                0xA => Register::D,
+                                0xB => Register::E,
+                                0xC => Register::H,
+                                0xD => Register::L,
+                                0xE => Register::HL,
+                                0xF => Register::A,
+                                _ => unreachable!(),
+                            },
+                            treat_value_in_register_as_memory_address: (opcode & 0b00001111) == 0xE,
+                        })
+                    }
+                    0xC0..=0xC7 | 0xD0..=0xD7 | 0xE0..=0xE7 | 0xF0..=0xF7 => {
+                        Ok(Instruction::SetNthBitOfRegister {
+                            nth: ((opcode >> 4) - 0x4) * 2,
+                            register: match opcode & 0b00001111 {
+                                0x0 => Register::B,
+                                0x1 => Register::C,
+                                0x2 => Register::D,
+                                0x3 => Register::E,
+                                0x4 => Register::H,
+                                0x5 => Register::L,
+                                0x6 => Register::HL,
+                                0x7 => Register::A,
+                                _ => unreachable!(),
+                            },
+                            treat_value_in_register_as_memory_address: (opcode & 0b00001111) == 0x6,
+                        })
+                    }
+                    0xC8..=0xCF | 0xD8..=0xDF | 0xE8..=0xEF | 0xF8..=0xFF => {
+                        Ok(Instruction::SetNthBitOfRegister {
+                            nth: (((opcode >> 4) - 0x4) * 2) + 1,
+                            register: match opcode & 0b00001111 {
+                                0x8 => Register::B,
+                                0x9 => Register::C,
+                                0xA => Register::D,
+                                0xB => Register::E,
+                                0xC => Register::H,
+                                0xD => Register::L,
+                                0xE => Register::HL,
+                                0xF => Register::A,
+                                _ => unreachable!(),
+                            },
+                            treat_value_in_register_as_memory_address: (opcode & 0b00001111) == 0xE,
+                        })
+                    }
+                }
+            }
             _ => Err(eyre!("Unknown 8 bit opcode")),
         }
     }
